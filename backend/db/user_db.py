@@ -39,5 +39,3 @@ def login(username, password):
     exists = cursor.fetchone() is not None
     conn.close()
     return exists
-
-#create_users_table()
