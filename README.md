@@ -57,15 +57,9 @@ El sistema consta de dos partes principales:
 │   └── test
 │       ├── expert.py
 │       └── lecturaCarrerasDB.py
-├── COMMITS.md
+|
 ├── docs
-│   ├── arquitectura-sistema-experto.png
-│   ├── chatbox.jpg
-│   ├── diagnostico.jpg
-│   ├── explore.jpg
-│   ├── home.jpg
-│   ├── login.jpg
-│   └── register.jpg
+│   └── ...
 ├── expertus
 │   ├── app
 │   │   ├── +html.tsx
@@ -74,6 +68,11 @@ El sistema consta de dos partes principales:
 │   │   ├── +not-found.tsx
 │   │   ├── register.tsx
 │   │   └── (tabs)
+│   │       ├── _layout.tsx
+│   │       ├── chatbox.tsx
+│   │       ├── explore.tsx
+│   │       ├── index.tsx
+│   │       └── settings.tsx
 │   ├── app.json
 │   ├── assets
 │   │   ├── fonts
@@ -103,6 +102,7 @@ El sistema consta de dos partes principales:
 │   ├── scripts
 │   │   └── reset-project.js
 │   └── tsconfig.json
+├── COMMITS.md
 └── README.md
 ```
 
@@ -145,13 +145,116 @@ El sistema consta de dos partes principales:
 2. **Representación del Conocimiento**
 
    - **Base de Conocimiento**: Almacena el conocimiento formalizado, que incluye reglas, hechos, heurísticas y otros tipos de información estructurada.
+```python
+# Importar la función extraer_datos del archivo extract_db.py
+from extract_db import extraer_datos
+
+#Función importada de extract_db.py
+def extraer_datos():
+    conn = sqlite3.connect('carreras.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+    tablas = cursor.fetchall()
+    carreras_preguntas = {}
+    for tabla in tablas:
+        nombre_tabla = tabla[0].replace("_", " ")
+        cursor.execute(f"SELECT categoria, pregunta FROM {tabla[0]}")
+        filas = cursor.fetchall()
+        carreras_preguntas[nombre_tabla] = [(fila[0], fila[1]) for fila in filas]
+    conn.close()
+    return carreras_preguntas
+
+# En app.py: obtenemos las preguntas asociadas a cada carrera y categoría
+conocimiento = extraer_datos()
+
+```
+> Importamos la función extraer_datos del archivo extract_db.py, que nos permite acceder a la base de datos carreras.db y extraer las preguntas asociadas a cada carrera y categoría. Luego, almacenamos esta información en el diccionario conocimiento, que servirá como nuestra Base de Conocimiento en el sistema experto.
+
    - **Base de Hechos**: Contiene datos específicos de casos particulares o instancias de problemas que el sistema necesita resolver. Estos datos son dinámicos y específicos a cada consulta o caso.
+
+```python
+# Base de Hechos en app.py inicializa vacia
+conocido = []
+
+# Parte de código que sería parte de la actualización dinámica:
+def procesar_respuesta(data):
+    global current_symptom, diagnostico_actual
+    if 'respuesta' not in data:
+        return jsonify({'error': 'Respuesta no proporcionada'}), 400
+    respuesta = data['respuesta'].strip().lower()
+    if respuesta not in ['si', 'no']:
+        return jsonify({'error': 'Respuesta inválida'}), 400
+
+    if respuesta == 'si':
+        conocido.append(current_symptom)
+    elif respuesta == 'no':
+        conocido.append('no ' + current_symptom)
+
+```
+> En app.py, creamos una lista llamada conocido, que se utilizará para almacenar los datos específicos de casos particulares o instancias de problemas que el sistema necesita resolver. Esta lista se inicializa vacía y se actualizará dinámicamente a medida que el usuario proporciona respuestas a las preguntas del sistema experto. Cada elemento en esta lista representará un hecho o conocimiento específico que el sistema utilizará para analizar y llegar a conclusiones o recomendaciones.
 
 3. **Tratamiento del Conocimiento**
 
    - **Motor de Inferencia**: Es el componente que aplica las reglas y el conocimiento almacenado en la base de conocimiento para analizar los hechos y llegar a conclusiones o recomendaciones.
+```python 
+def haz_diagnostico():
+    global explicacion_diagnostico
+    explicacion_diagnostico = []
+    for diagnosis, sintomas in conocimiento.items():
+        if prueba_presencia_de(sintomas):
+            explicacion_diagnostico = [sintoma[1] for sintoma in sintomas if prueba_verdad_de(sintoma[1])]
+            return diagnosis
+    return None
+```
+> haz_diagnostico() recorre las posibles enfermedades (diagnosis) y sus síntomas (sintomas) almacenados en conocimiento. Utiliza la función prueba_presencia_de para verificar si todos los síntomas de una enfermedad están presentes en la lista de síntomas conocidos (conocido). Si encuentra una coincidencia, genera una lista de síntomas verificados (explicacion_diagnostico) y retorna la enfermedad diagnosticada.
+
    - **Módulo de Explicaciones**: Proporciona justificaciones y explicaciones sobre cómo el sistema ha llegado a ciertas conclusiones. Esto es crucial para la transparencia y la confianza en el sistema.
+
+```python
+def obtener_pregunta():
+    global current_symptom, diagnostico_actual
+    if diagnostico_actual:
+        return jsonify({'diagnostico': diagnostico_actual, 'explicacion': explicacion_diagnostico})
+    if current_symptom is None:
+        current_symptom = siguiente_sintoma()
+    if current_symptom is not None:
+        return jsonify({'pregunta': f'Es verdad que {current_symptom}?'})
+    else:
+        diagnostico_actual = haz_diagnostico()
+        if diagnostico_actual:
+            return jsonify({'diagnostico': diagnostico_actual, 'explicacion': explicacion_diagnostico})
+        return jsonify({'diagnostico': 'No hay suficiente conocimiento para elaborar un diagnostico.'})
+```
+> En obtener_pregunta(), cuando se ha realizado un diagnóstico (diagnostico_actual no es None), se retorna una respuesta JSON que incluye tanto el diagnóstico como la explicación (explicacion_diagnostico). Esta explicación contiene los síntomas que fueron considerados verdaderos y que llevaron al diagnóstico final, proporcionando así transparencia sobre el proceso de inferencia del sistema.
+
    - **Interacción entre Componentes**: El motor de inferencia y el módulo de explicaciones interactúan con la base de conocimiento y la base de hechos para procesar la información y generar resultados explicativos.
+```python
+def procesar_respuesta(data):
+    global current_symptom, diagnostico_actual
+    if 'respuesta' not in data:
+        return jsonify({'error': 'Respuesta no proporcionada'}), 400
+    respuesta = data['respuesta'].strip().lower()
+    if respuesta not in ['si', 'no']:
+        return jsonify({'error': 'Respuesta inválida'}), 400
+
+    if respuesta == 'si':
+        conocido.append(current_symptom)
+    elif respuesta == 'no':
+        conocido.append('no ' + current_symptom)
+
+    diagnostico_actual = haz_diagnostico()
+    if diagnostico_actual:
+        return jsonify({'diagnostico': diagnostico_actual, 'explicacion': explicacion_diagnostico})
+
+    current_symptom = siguiente_sintoma()
+    if current_symptom is None:
+        diagnostico_actual = haz_diagnostico()
+        if diagnostico_actual:
+            return jsonify({'diagnostico': diagnostico_actual, 'explicacion': explicacion_diagnostico})
+        return jsonify({'diagnostico': 'No hay suficiente conocimiento para elaborar un diagnostico.'})
+    return jsonify({'pregunta': f'Es verdad que {current_symptom}?'})
+```
+> En procesar_respuesta(), la respuesta del usuario a la pregunta actual se procesa y se actualiza la lista de síntomas conocidos (conocido). Luego, se llama a la función haz_diagnostico para intentar realizar un diagnóstico basado en la información actual. Si se realiza un diagnóstico, se retorna un JSON con el diagnóstico y la explicación. Si no se realiza un diagnóstico, se determina el siguiente síntoma a preguntar y se formula la siguiente pregunta al usuario. Así, la función procesar_respuesta muestra cómo el motor de inferencia, el módulo de explicaciones y la base de hechos interactúan dinámicamente para llevar a cabo el proceso de diagnóstico y explicación.
 
 4. **Utilización del Conocimiento**
    - **Interfaz de Usuario**: El punto de contacto entre el usuario y el sistema experto. A través de esta interfaz, el usuario puede introducir datos, hacer consultas y recibir recomendaciones o conclusiones del sistema.
@@ -160,6 +263,17 @@ El sistema consta de dos partes principales:
 <p align="center">
   <img src="docs/arquitectura-sistema-experto.png" alt="Expert System" width="500px" />
 </p>
+
+5. ***Tipo de Encadenamiento***
+
+   El código utiliza encadenamiento hacia adelante (forward chaining) por las siguientes razones:
+
+   - **Recopilación y Aplicación de Hechos:** El sistema comienza con una base de hechos conocida (síntomas proporcionados por el usuario). Aplica reglas (relaciones entre síntomas y diagnósticos) para derivar nuevos hechos (diagnósticos posibles).
+
+   - **Progresión Basada en Hechos:** A medida que el usuario proporciona respuestas, se añaden nuevos hechos a la lista de conocido. Las reglas se evalúan continuamente para ver si los hechos actuales pueden derivar un diagnóstico.
+
+   - **Evaluación Continua:** Se genera una nueva pregunta basada en los síntomas que aún no han sido evaluados. Este proceso continúa hasta que se puede derivar un diagnóstico a partir de los hechos conocidos.
+
 
 ## Metodologia
 
