@@ -1,12 +1,7 @@
 import axios from "axios";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-} from "react-native";
+import { View, Text, TextInput, StyleSheet } from "react-native";
 import { TouchableOpacity } from "react-native-gesture-handler";
 
 export default function LoginScreen({ onLogin }: any) {
@@ -16,15 +11,12 @@ export default function LoginScreen({ onLogin }: any) {
 
   const handleLogin = async () => {
     try {
-      console.log(email, password)
-      const response = await axios.post(
-        "https://ai-expert-system-vocational-guidance-gbod.onrender.com/login",
-        {
-          username: email,
-          password: password,
-        }
-      );
-      console.log(response.data)
+      console.log(email, password);
+      const response = await axios.post("http://127.0.0.1:5000/login", {
+        username: email,
+        password: password,
+      });
+      console.log(response.data);
       // Manejar la respuesta
       if (response.data.mensaje === "Inicio de sesión exitoso") {
         onLogin();
@@ -33,7 +25,9 @@ export default function LoginScreen({ onLogin }: any) {
       }
     } catch (error) {
       console.error("Error durante el inicio de sesión:", error);
-      alert("Error durante el inicio de sesión. Por favor, intenta nuevamente.");
+      alert(
+        "Error durante el inicio de sesión. Por favor, intenta nuevamente."
+      );
     }
   };
 
@@ -112,5 +106,5 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     textDecorationLine: "underline",
-  }
+  },
 });

@@ -12,11 +12,9 @@ export default function HomeScreen() {
 
   useEffect(() => {
     axios
-      .get(
-        "https://ai-expert-system-vocational-guidance-gbod.onrender.com/course"
-      )
+      .get("http://127.0.0.1:5000/course")
       .then((response) => {
-        const data = response.data.map((title: string) => ({
+        const data = response.data.careers.map((title: string) => ({
           title: formatTitle(title),
         }));
         setCareers(data);

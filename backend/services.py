@@ -33,7 +33,7 @@ def get_current_question():
         return {"question": question[1]}
     else:
         recommendations = prediction(user_answers)
-        return {"message": "All questions answered", "recommendations": recommendations}
+        return {"message": "All questions answered", "recommendations": recommendations, "user": user_answers}
 
 def post_answer(answer):
     global current_question_index, user_answers
@@ -47,7 +47,7 @@ def post_answer(answer):
         return {"question": next_question[1], "user": user_answers}
     else:
         recommendations = prediction(user_answers)
-        return {"message": "All questions answered", "recommendations": recommendations}
+        return {"message": "All questions answered", "recommendations": recommendations,"user": user_answers}
 
 def restart_diagnosis():
     global user_answers, current_question_index, questions, stored_recommendations
@@ -56,6 +56,10 @@ def restart_diagnosis():
     questions = []
     stored_recommendations = None
     return {"message": "Diagnosis restarted"}
+
+def get_course():
+    careers = list(ct.career_data.keys())
+    return {"careers": careers}
 
 def prediction(user_answers):
     global stored_recommendations
