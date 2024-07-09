@@ -24,7 +24,11 @@ def create_app():
     @app.route('/nuevo_diagnostico', methods=['POST'])
     def restart_diagnosis():
         return handle_restart_diagnosis()
-
+    
+    @app.route('/course', methods=['GET'])
+    def course():
+        return handle_get_courses()
+    
     @app.route('/register', methods=['POST'])
     def register():
         return handle_register()
@@ -62,6 +66,14 @@ def handle_restart_diagnosis():
         return jsonify(result)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+def handle_get_courses():
+    try:
+        result = service.get_course()
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 def handle_register():
     try:
