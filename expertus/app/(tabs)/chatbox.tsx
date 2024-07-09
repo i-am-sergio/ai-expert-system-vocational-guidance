@@ -30,41 +30,58 @@ function ChatBoxArea() {
   const flatListRef = useRef<FlatList>(null);
   const [reset, setReset] = useState(false);
   const [block, setBlock] = useState(false);
-  const [explainer, setExplainer] = useState([]);
+  const [explainer, setExplainer] = useState<any>({});
 
   const slideAnim = useRef(new Animated.Value(-80)).current;
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     // Obtener la pregunta inicial
-    axios
-      .get(
-        "https://ai-expert-system-vocational-guidance-gbod.onrender.com/pregunta"
-      )
-      .then((res) => {
-        if (res.data.pregunta) {
-          setMessages([{ type: "question", text: res.data.pregunta }]);
-        }
-      });
+    axios.get("http://127.0.0.1:5000/pregunta").then((res) => {
+      if (res.data.question) {
+        setMessages([{ type: "question", text: res.data.question }]);
+      } else {
+        setBlock(true);
+        const topCareers = res.data.recommendations
+          .slice(0, 3)
+          .map((career: any) => `${career[0]}, ${career[1].toFixed(2)}`)
+          .join("\n");
+        setMessages((prevMessages) => [
+          ...prevMessages,
+          {
+            type: "diagnostico",
+            text: `\n${topCareers}`,
+          },
+        ]);
+        const userArray = Object.entries(res.data.user).map(([key, value]) => {
+          if (typeof value === "number") {
+            return {
+              key,
+              value: `${value * 10}%`,
+            };
+          } else {
+            return {
+              key,
+              value: `${value}`,
+            };
+          }
+        });
+        setExplainer(userArray);
+      }
+    });
   }, []);
 
   const handleReset = () => {
     setMessages([]);
     axios
-      .post(
-        "https://ai-expert-system-vocational-guidance-gbod.onrender.com/nuevo_diagnostico"
-      )
+      .post("http://127.0.0.1:5000/nuevo_diagnostico")
       .then((res) => {
-        if (res.data.mensaje) {
-          axios
-            .get(
-              "https://ai-expert-system-vocational-guidance-gbod.onrender.com/pregunta"
-            )
-            .then((res) => {
-              if (res.data.pregunta) {
-                setMessages([{ type: "question", text: res.data.pregunta }]);
-              }
-            });
+        if (res.data.message) {
+          axios.get("http://127.0.0.1:5000/pregunta").then((res) => {
+            if (res.data.question) {
+              setMessages([{ type: "question", text: res.data.question }]);
+            }
+          });
           setReset(true);
           setBlock(false);
           Animated.timing(slideAnim, {
@@ -86,6 +103,9 @@ function ChatBoxArea() {
             }).start(handleAnimationComplete);
           }, 2000); // Oculta el mensaje después de 2 segundos
         }
+      })
+      .catch((error) => {
+        console.error("Error en la solicitud:", error);
       });
   };
 
@@ -96,27 +116,49 @@ function ChatBoxArea() {
       { type: "answer", text: message },
     ]);
     axios
-      .post(
-        "https://ai-expert-system-vocational-guidance-gbod.onrender.com/respuesta",
-        {
-          respuesta: message,
-        }
-      )
+      .post("http://127.0.0.1:5000/respuesta", {
+        answer: message,
+      })
       .then((res) => {
-        if (res.data.pregunta) {
+        if (res.data.question) {
           setMessages((prevMessages) => [
             ...prevMessages,
-            { type: "question", text: res.data.pregunta },
+            { type: "question", text: res.data.question },
           ]);
         } else {
           setBlock(true);
+          const topCareers = res.data.recommendations
+            .slice(0, 3)
+            .map((career: any) => `${career[0]}, ${career[1].toFixed(2)}`)
+            .join("\n");
           setMessages((prevMessages) => [
             ...prevMessages,
-            { type: "diagnostico", text: res.data.diagnostico },
+            {
+              type: "diagnostico",
+              text: `\n${topCareers}`,
+            },
           ]);
-          setExplainer(res.data.explicacion);
+          const userArray = Object.entries(res.data.user).map(
+            ([key, value]) => {
+              if (typeof value === "number") {
+                return {
+                  key,
+                  value: `${value * 10}%`,
+                };
+              } else {
+                return {
+                  key,
+                  value: `${value}`,
+                };
+              }
+            }
+          );
+          setExplainer(userArray);
         }
         flatListRef.current?.scrollToEnd({ animated: true });
+      })
+      .catch((error) => {
+        console.error("Error en la solicitud:", error);
       });
   };
 
@@ -156,9 +198,9 @@ function ChatBoxArea() {
         {isDiagnostico && (
           <View style={styles.diagnostico}>
             <Text style={styles.explanationTitle}>Explicación:</Text>
-            {explainer.map((exp, index) => (
-              <Text key={exp} style={styles.explanationText}>
-                - {exp}
+            {explainer.map((exp: any, index: number) => (
+              <Text key={`${exp.key}-${index}`} style={styles.explanationText}>
+                - {exp.key}: {exp.value}
               </Text>
             ))}
           </View>
@@ -378,6 +420,4 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#000",
   },
-
-
 });
