@@ -19,10 +19,13 @@ export default function RegisterScreen() {
 
   const handleRegister = () => {
     axios
-      .post("http://127.0.0.1:5000/register", {
-        username: email,
-        password: password,
-      })
+      .post(
+        "https://ai-expert-system-vocational-guidance-gbod.onrender.com/register",
+        {
+          username: email,
+          password: password,
+        }
+      )
       .then((response) => {
         Alert.alert("Registro exitoso", "Usuario registrado con éxito");
         navigation.goBack(); // Navigate back to the login screen

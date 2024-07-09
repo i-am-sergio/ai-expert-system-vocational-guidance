@@ -30,58 +30,72 @@ function ChatBoxArea() {
   const flatListRef = useRef<FlatList>(null);
   const [reset, setReset] = useState(false);
   const [block, setBlock] = useState(false);
-  const [explainer, setExplainer] = useState<any>({});
+  const [explainer, setExplainer] = useState<{ key: string; value: string }[]>(
+    []
+  );
 
   const slideAnim = useRef(new Animated.Value(-80)).current;
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     // Obtener la pregunta inicial
-    axios.get("http://127.0.0.1:5000/pregunta").then((res) => {
-      if (res.data.question) {
-        setMessages([{ type: "question", text: res.data.question }]);
-      } else {
-        setBlock(true);
-        const topCareers = res.data.recommendations
-          .slice(0, 3)
-          .map((career: any) => `${career[0]}, ${career[1].toFixed(2)}`)
-          .join("\n");
-        setMessages((prevMessages) => [
-          ...prevMessages,
-          {
-            type: "diagnostico",
-            text: `\n${topCareers}`,
-          },
-        ]);
-        const userArray = Object.entries(res.data.user).map(([key, value]) => {
-          if (typeof value === "number") {
-            return {
-              key,
-              value: `${value * 10}%`,
-            };
-          } else {
-            return {
-              key,
-              value: `${value}`,
-            };
-          }
-        });
-        setExplainer(userArray);
-      }
-    });
+    axios
+      .get(
+        "https://ai-expert-system-vocational-guidance-gbod.onrender.com/pregunta"
+      )
+      .then((res) => {
+        if (res.data.question) {
+          setMessages([{ type: "question", text: res.data.question }]);
+        } else {
+          setBlock(true);
+          const topCareers = res.data.recommendations
+            .slice(0, 3)
+            .map((career: any) => `${career[0]}, ${career[1].toFixed(2)}`)
+            .join("\n");
+          setMessages((prevMessages) => [
+            ...prevMessages,
+            {
+              type: "diagnostico",
+              text: `\n${topCareers}`,
+            },
+          ]);
+          const userArray = Object.entries(res.data.user).map(
+            ([key, value]) => {
+              if (typeof value === "number") {
+                return {
+                  key,
+                  value: `${value * 10}%`,
+                };
+              } else {
+                return {
+                  key,
+                  value: `${value}`,
+                };
+              }
+            }
+          );
+          setExplainer(userArray);
+        }
+      });
   }, []);
 
   const handleReset = () => {
     setMessages([]);
     axios
-      .post("http://127.0.0.1:5000/nuevo_diagnostico")
+      .post(
+        "https://ai-expert-system-vocational-guidance-gbod.onrender.com/nuevo_diagnostico"
+      )
       .then((res) => {
         if (res.data.message) {
-          axios.get("http://127.0.0.1:5000/pregunta").then((res) => {
-            if (res.data.question) {
-              setMessages([{ type: "question", text: res.data.question }]);
-            }
-          });
+          axios
+            .get(
+              "https://ai-expert-system-vocational-guidance-gbod.onrender.com/pregunta"
+            )
+            .then((res) => {
+              if (res.data.question) {
+                setMessages([{ type: "question", text: res.data.question }]);
+              }
+            });
           setReset(true);
           setBlock(false);
           Animated.timing(slideAnim, {
@@ -116,9 +130,12 @@ function ChatBoxArea() {
       { type: "answer", text: message },
     ]);
     axios
-      .post("http://127.0.0.1:5000/respuesta", {
-        answer: message,
-      })
+      .post(
+        "https://ai-expert-system-vocational-guidance-gbod.onrender.com/respuesta",
+        {
+          answer: message,
+        }
+      )
       .then((res) => {
         if (res.data.question) {
           setMessages((prevMessages) => [
@@ -198,7 +215,7 @@ function ChatBoxArea() {
         {isDiagnostico && (
           <View style={styles.diagnostico}>
             <Text style={styles.explanationTitle}>Explicación:</Text>
-            {explainer.map((exp: any, index: number) => (
+            {explainer?.map((exp: any, index: number) => (
               <Text key={`${exp.key}-${index}`} style={styles.explanationText}>
                 - {exp.key}: {exp.value}
               </Text>
