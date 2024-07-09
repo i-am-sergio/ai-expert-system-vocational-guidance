@@ -12,10 +12,13 @@ export default function LoginScreen({ onLogin }: any) {
   const handleLogin = async () => {
     try {
       console.log(email, password);
-      const response = await axios.post("http://127.0.0.1:5000/login", {
-        username: email,
-        password: password,
-      });
+      const response = await axios.post(
+        "https://ai-expert-system-vocational-guidance-gbod.onrender.com/login",
+        {
+          username: email,
+          password: password,
+        }
+      );
       console.log(response.data);
       // Manejar la respuesta
       if (response.data.mensaje === "Inicio de sesión exitoso") {
